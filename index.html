@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>projector / new year greeting</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @font-face {
+      font-family: 'Univers LT CYR';
+      src: local('Univers LT CYR 55 Roman'), local('UniversLTCYR-55Roman'), local('Univers');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    :root {
+      --prjctr-blue: #3548FE;
+      --prjctr-black: #000000;
+      --prjctr-white: #FFFFFF;
+      --prjctr-gray: #1C1C1E;
+      --prjctr-muted: #8E8E93;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--prjctr-black);
+      color: var(--prjctr-white);
+      font-family: 'Univers LT CYR', 'Univers', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', sans-serif;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 20px;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    /* Верхня панель з логотипом у кутку */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .logo-container svg {
+      width: 110px;
+      height: auto;
+      display: block;
+    }
+
+    .year-tag {
+      font-size: 13px;
+      text-transform: lowercase;
+      color: var(--prjctr-muted);
+      border: 1px solid var(--prjctr-gray);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    /* Головний контент */
+    .main-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0;
+      position: relative;
+    }
+
+    /* Айдентика: фірмова діагональна рисочка 45° */
+    .diagonal-title-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+
+    .diagonal-line {
+      width: 32px;
+      height: 2px;
+      background-color: var(--prjctr-blue);
+      transform: rotate(-45deg);
+      margin: 12px 0;
+      display: inline-block;
+    }
+
+    .title-text {
+      font-size: 20px;
+      font-weight: 400;
+      text-transform: lowercase;
+      line-height: 1.25;
+      max-width: 310px;
+    }
+
+    .title-text .highlight-blue {
+      color: var(--prjctr-blue);
+    }
+
+    /* Інтерактивна новорічна коробка у стилістиці Projector */
+    .box-wrapper {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      margin: 10px auto;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .box-wrapper:active {
+      transform: scale(0.96);
+    }
+
+    .box-floating {
+      animation: floatBox 3.5s ease-in-out infinite;
+    }
+
+    @keyframes floatBox {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+
+    .svg-box {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* Анімації розпакування */
+    .lid {
+      transform-origin: 110px 60px;
+      transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
+    }
+
+    .ribbon {
+      transition: opacity 0.35s ease, transform 0.4s ease;
+    }
+
+    .box-wrapper.opened .lid {
+      transform: translateY(-90px) rotate(-16deg) scale(0.9);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .box-wrapper.opened .ribbon {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+
+    /* Картка з подарунком */
+    .gift-card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.3);
+      width: 90%;
+      max-width: 320px;
+      background: var(--prjctr-white);
+      color: var(--prjctr-black);
+      padding: 24px 20px;
+      border-radius: 4px;
+      box-shadow: 0 20px 40px rgba(53, 72, 254, 0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.65s cubic-bezier(0.19, 1, 0.22, 1);
+      z-index: 10;
+      text-align: center;
+    }
+
+    .gift-card.show {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .gift-badge {
+      display: inline-block;
+      background: var(--prjctr-blue);
+      color: var(--prjctr-white);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 2px;
+      margin-bottom: 14px;
+      text-transform: lowercase;
+    }
+
+    .gift-name {
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1.2;
+      margin-bottom: 12px;
+      text-transform: lowercase;
+    }
+
+    .gift-name .tag {
+      color: var(--prjctr-blue);
+    }
+
+    .gift-subtext {
+      font-size: 13px;
+      color: #555555;
+      line-height: 1.35;
+      text-transform: lowercase;
+      border-top: 1px solid #E5E5EA;
+      padding-top: 12px;
+      margin-top: 8px;
+    }
+
+    /* Підказка знизу коробки */
+    .tap-hint {
+      margin-top: 22px;
+      font-size: 14px;
+      color: var(--prjctr-muted);
+      text-transform: lowercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.3s ease;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--prjctr-blue);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.4); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.6; }
+    }
+
+    /* Футер з теплим привітанням */
+    .footer {
+      text-align: center;
+      width: 100%;
+      padding-top: 12px;
+    }
+
+    .footer-text {
+      font-size: 13px;
+      color: var(--prjctr-muted);
+      line-height: 1.4;
+      text-transform: lowercase;
+    }
+
+    .footer-text .heart {
+      color: var(--prjctr-blue);
+      display: inline-block;
+    }
+
+    /* Спіннер завантаження */
+    .loader {
+      display: none;
+      width: 24px;
+      height: 24px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: var(--prjctr-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-top: 15px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Верхня панель: логотип у кутку -->
+  <header class="header">
+    <div class="logo-container" aria-label="Projector Logo">
+      <!-- Фірмовий скорочений логотип PRJCTR з вигнутими JC -->
+      <svg viewBox="0 0 160 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 48H26C31 48 34 45 34 40.5C34 36 31 33 26 33H12V48ZM0 24H27C37.5 24 45 30.5 45 40.5C45 50.5 37.5 57 27 57H12V75H0V24Z" fill="#3548FE"/>
+        <path d="M54 75H43L59.5 24H73L87.5 75H76L73 63.5H57.5L54 75ZM60 54.5H70.5L65.5 35.5L60 54.5Z" fill="#3548FE" opacity="0"/>
+        <!-- Графіка стилізованого моноліту PR / JC / TR -->
+        <text x="0" y="65" fill="#3548FE" font-family="'Univers LT CYR', sans-serif" font-weight="900" font-size="52" letter-spacing="-2">PR</text>
+        <path d="M51 68C53 50 63 32 75 22C86 13 95 18 89 32C84 43 73 60 62 72C57 77 50 75 51 68Z" fill="#3548FE"/>
+        <text x="96" y="42" fill="#3548FE" font-family="'Univers LT CYR', sans-serif" font-weight="900" font-size="46" letter-spacing="-2">TR</text>
+      </svg>
+    </div>
+    <div class="year-tag">2026/2027</div>
+  </header>
+
+  <!-- Головний інтерактивний блок -->
+  <main class="main-stage">
+    
+    <div class="diagonal-title-wrap" id="titleSection">
+      <p class="title-text">
+        новорічне вітання від команди <span class="highlight-blue">projector!</span>
+      </p>
+      <div class="diagonal-line"></div>
+      <p class="title-text">
+        ми підготували для наших партнерів дещо особливе
+      </p>
+    </div>
+
+    <!-- Коробка з подарунком -->
+    <div class="box-wrapper box-floating" id="giftBox" onclick="openBox()">
+      <svg class="svg-box" viewBox="0 0 220 220">
+        <!-- Тінь під коробкою -->
+        <ellipse cx="110" cy="205" rx="75" ry="9" fill="rgba(0,0,0,0.6)" filter="blur(4px)" />
+
+        <!-- Основа коробки (Brand Blue) -->
+        <g id="boxBody">
+          <rect x="40" y="85" width="140" height="110" rx="4" fill="#3548FE" />
+          <!-- Вертикальна біла стрічка -->
+          <rect class="ribbon" x="100" y="85" width="20" height="110" fill="#FFFFFF" />
+          <!-- Горизонтальна біла стрічка -->
+          <rect class="ribbon" x="40" y="130" width="140" height="20" fill="#FFFFFF" />
+        </g>
+
+        <!-- Кришка коробки -->
+        <g class="lid" id="boxLid">
+          <rect x="33" y="65" width="154" height="26" rx="3" fill="#1F2ECB" />
+          <!-- Стрічка на кришці -->
+          <rect class="ribbon" x="100" y="65" width="20" height="26" fill="#FFFFFF" />
+          <!-- Фірмовий лаконічний бант -->
+          <g class="ribbon" id="bow">
+            <path d="M110 65 C95 40, 70 50, 95 65 Z" fill="#FFFFFF" />
+            <path d="M110 65 C125 40, 150 50, 125 65 Z" fill="#FFFFFF" />
+            <circle cx="110" cy="65" r="7" fill="#E5E5EA" />
+          </g>
+        </g>
+      </svg>
+
+      <!-- Випливаюча картка з подарунком -->
+      <div class="gift-card" id="giftCard">
+        <span class="gift-badge">ваш подарунок</span>
+        <h2 class="gift-name" id="giftTitle">знижка 10% на будь-який <span class="tag">course</span></h2>
+        <p class="gift-subtext">найближчим часом з вами зв'яжеться менеджер Prjctr</p>
+      </div>
+    </div>
+
+    <!-- Підказка для кліку -->
+    <div class="tap-hint" id="tapHint">
+      <span class="pulse-dot"></span>
+      <span>торкніться коробки, щоб розпакувати</span>
+    </div>
+
+    <div class="loader" id="loader"></div>
+  </main>
+
+  <!-- Футер -->
+  <footer class="footer">
+    <p class="footer-text">
+      дякуємо вам за співпрацю в році, що минає <span class="heart">💙</span><br>
+      побачимось в наступному!
+    </p>
+  </footer>
+
+  <script>
+    // Ініціалізація Telegram WebApp SDK
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      // Налаштування теми Telegram
+      try {
+        tg.setHeaderColor('#000000');
+        tg.setBackgroundColor('#000000');
+      } catch (e) {}
+    }
+
+    // ВСТАВТЕ СЮДИ URL ВАШОГО WEBHOOK З MAKE
+    const MAKE_WEBHOOK_URL = ""; 
+
+    let isOpened = false;
+
+    // Пул подарунків за замовчуванням (для тестів без вебхука)
+    const fallbackGifts = [
+      "знижка 10% на будь-який <span class='tag'>course</span>",
+      "2 місяці безкоштовного доступу до бібліотеки prjctr",
+      "знижка 20% на підписку до бібліотеки prjctr",
+      "мерч prjctr",
+      "книга від projector publishing",
+      "знижка 20% на будь-який айтем від projector publishing&store"
+    ];
+
+    async function openBox() {
+      if (isOpened) return;
+      isOpened = true;
+
+      // Тактильний відгук у смартфоні (Haptic Feedback)
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred('medium');
+      }
+
+      const box = document.getElementById('giftBox');
+      const hint = document.getElementById('tapHint');
+      const loader = document.getElementById('loader');
+      const card = document.getElementById('giftCard');
+      const giftTitle = document.getElementById('giftTitle');
+      const titleSection = document.getElementById('titleSection');
+
+      box.classList.remove('box-floating');
+      hint.style.opacity = '0';
+      loader.style.display = 'block';
+
+      // Дані користувача з Telegram
+      const user = tg?.initDataUnsafe?.user || {
+        id: "demo_id",
+        username: "demo_partner",
+        first_name: "партнер"
+      };
+
+      let assignedGift = "";
+
+      // Якщо вказано вебхук Make — викликаємо його
+      if (MAKE_WEBHOOK_URL && MAKE_WEBHOOK_URL.startsWith('http')) {
+        try {
+          const response = await fetch(MAKE_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              telegram_id: user.id,
+              username: user.username ? '@' + user.username.replace('@', '') : '',
+              first_name: user.first_name || '',
+              last_name: user.last_name || '',
+              init_data: tg?.initData || ''
+            })
+          });
+
+          const data = await response.json();
+          if (data.status === 'not_authorized') {
+            giftTitle.innerHTML = "це святкове привітання розраховане на партнерів projector 💙";
+            document.querySelector('.gift-subtext').innerText = "якщо ви наш партнер, напишіть своєму менеджеру";
+            assignedGift = "not_authorized";
+          } else {
+            assignedGift = data.gift || fallbackGifts[0];
+          }
+        } catch (err) {
+          console.warn("Помилка вебхука, використовуємо локальний fallback", err);
+          assignedGift = fallbackGifts[Math.floor(Math.random() * fallbackGifts.length)];
+        }
+      } else {
+        // Тестовий режим (обираємо випадковий подарунок)
+        assignedGift = fallbackGifts[Math.floor(Math.random() * fallbackGifts.length)];
+      }
+
+      loader.style.display = 'none';
+
+      // Запуск анімації розпакування коробки
+      box.classList.add('opened');
+
+      if (assignedGift !== "not_authorized") {
+        giftTitle.innerHTML = formatGiftName(assignedGift);
+      }
+
+      // Запуск фірмового конфеті (Projector Blue + White)
+      triggerConfetti();
+
+      if (tg?.HapticFeedback) {
+        setTimeout(() => tg.HapticFeedback.notificationOccurred('success'), 300);
+      }
+
+      // Показ картки з подарунком
+      setTimeout(() => {
+        card.classList.add('show');
+      }, 350);
+    }
+
+    // Підсвічування спеціальних слів (course, camp, lecture тощо) фірмовим синім
+    function formatGiftName(text) {
+      return text
+        .toLowerCase()
+        .replace(/course/g, "<span class='tag'>course</span>")
+        .replace(/store/g, "<span class='tag'>store</span>")
+        .replace(/publishing/g, "<span class='tag'>publishing</span>");
+    }
+
+    // Конфеті: синій (#3548FE), білий та легкий сріблястий
+    function triggerConfetti() {
+      const count = 70;
+      const defaults = {
+        origin: { y: 0.6 },
+        colors: ['#3548FE', '#FFFFFF', '#6C7BFF', '#D8DCFF']
+      };
+
+      function fire(particleRatio, opts) {
+        confetti(Object.assign({}, defaults, opts, {
+          particleCount: Math.floor(count * particleRatio)
+        }));
+      }
+
+      fire(0.25, { spread: 26, startVelocity: 45 });
+      fire(0.2, { spread: 60 });
+      fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+      fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+      fire(0.1, { spread: 120, startVelocity: 40 });
+    }
+  </script>
+</body>
+</html>
